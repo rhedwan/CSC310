@@ -1,7 +1,10 @@
 import axios from "axios";
 import { PaperAnalysisResponse } from "@/types/paper";
 
-const API_BASE_URL = "http://localhost:4000"; // Update this with your actual API URL
+const API_BASE_URL =
+  process.env.NODE_ENV == "development"
+    ? "http://localhost:4000"
+    : "https://csc310-production.up.railway.app"; // Update this with your actual API URL
 
 export const analyzePapers = async (): // query: string
 Promise<PaperAnalysisResponse> => {
