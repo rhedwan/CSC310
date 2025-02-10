@@ -19,7 +19,6 @@ app.use(cors());
 app.use(compression());
 app.use(morgan("dev"));
 
-app.use("/stations", sensorRoute);
 app.use("/api/papers", paperAnalysisRoute);
 
 app.get("/", (req, res) => {
