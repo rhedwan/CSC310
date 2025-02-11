@@ -139,3 +139,107 @@ exports.analyzePapers = catchAsync(async (req, res, next) => {
     return next(new AppError("Error analyzing papers: " + error.message, 500));
   }
 });
+
+// Store subheadings and their counts
+const subheadingDatabase = new Map();
+
+const extractSubheadings = (paper) => {
+  const foundSubheadings = new Set();
+
+  // Extract subheadings from highlights if available
+  if (paper.highlighs && Array.isArray(paper.highlighs)) {
+    paper.highlighs.forEach((highlight) => {
+      // Use the complete highlight phrase
+      const subheading = highlight.toLowerCase().trim();
+      if (subheading) {
+        foundSubheadings.add(subheading);
+        // Update subheading count in database
+        subheadingDatabase.set(
+          subheading,
+          (subheadingDatabase.get(subheading) || 0) + 1
+        );
+      }
+    });
+  }
+
+  return Array.from(foundSubheadings);
+};
+
+exports.analyzeDeepLearningPapers = catchAsync(async (req, res, next) => {
+  const { query = "deep learning neural networks research papers" } = req.query;
+
+  if (!query) {
+    return next(new AppError("Please provide a search query", 400));
+  }
+
+  const API_KEY = "d261a0332fcb6759fba56405f881b58d";
+
+  const payload = {
+    api_key: API_KEY,
+    query,
+    country_code: "NG",
+    tld: "com",
+  };
+
+  try {
+    const response = await axios.get(
+      "https://api.scraperapi.com/structured/google/search",
+      { params: payload }
+    );
+
+    const papers = response.data.organic_results;
+    let allSubheadings = [];
+
+    // Clear previous subheading counts
+    subheadingDatabase.clear();
+
+    // Process each paper
+    papers.forEach((paper) => {
+      const subheadings = extractSubheadings(paper);
+      allSubheadings = [...allSubheadings, ...subheadings];
+    });
+
+    // Count subheading frequencies
+    let subheadingCounts = Array.from(subheadingDatabase.entries())
+      .filter(([_, count]) => count > 0) // Only include subheadings that were found
+      .sort((a, b) => b[1] - a[1]);
+
+    // Calculate total counts for percentage normalization
+    const totalCounts = subheadingCounts.reduce(
+      (sum, [_, count]) => sum + count,
+      0
+    );
+
+    // Map with normalized percentages
+    subheadingCounts = subheadingCounts.map(([subheading, count]) => ({
+      subheading,
+      count,
+      // Calculate normalized percentage
+      percentage: Math.round((count / totalCounts) * 100),
+    }));
+
+    // Prepare visualization data
+    const visualizationData = {
+      labels: subheadingCounts.map((s) => s.subheading),
+      values: subheadingCounts.map((s) => s.count),
+      percentages: subheadingCounts.map((s) => s.percentage),
+    };
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        totalPapersAnalyzed: papers.length,
+        subheadingAnalysis: subheadingCounts,
+        visualizationData,
+        papers: papers.map((p) => ({
+          title: p.title,
+          snippet: p.snippet,
+          highlights: p.highlighs || [],
+          link: p.link,
+        })),
+      },
+    });
+  } catch (error) {
+    return next(new AppError("Error analyzing papers: " + error.message, 500));
+  }
+});

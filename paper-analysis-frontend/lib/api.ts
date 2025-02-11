@@ -27,3 +27,24 @@ Promise<PaperAnalysisResponse> => {
     throw error;
   }
 };
+
+export const analyzeDeepLearningPapers = async (
+  query?: string
+): Promise<PaperAnalysisResponse> => {
+  try {
+    const response = await axios.get<PaperAnalysisResponse>(
+      `${API_BASE_URL}/api/papers/analyze-deep-learning`,
+      {
+        params: { query },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        error.response?.data?.message || "Failed to analyze papers"
+      );
+    }
+    throw error;
+  }
+};
