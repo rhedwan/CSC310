@@ -100,3 +100,17 @@ body {
     @apply bg-background text-foreground;
   }
 }
+@keyframes highlight {
+  0% {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  100% {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+.animate-highlight {
+  animation: highlight 1s ease-out;
+}
